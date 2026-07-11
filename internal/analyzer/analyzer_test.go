@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -34,6 +35,10 @@ ReferenceError: x is not defined
 				ErrorMessage: "x is not defined",
 				FilePath:     `C:\proj\src\index.js`,
 				LineNumber:   10,
+				StackTrace: []string{
+					"ReferenceError: x is not defined",
+					`    at Object.<anonymous> (C:\proj\src\index.js:10:5)`,
+				},
 			},
 		},
 		{
@@ -49,6 +54,10 @@ TypeError: Cannot read properties of undefined
 				ErrorMessage: "Cannot read properties of undefined",
 				FilePath:     `C:\proj\path\file.ts`,
 				LineNumber:   42,
+				StackTrace: []string{
+					"TypeError: Cannot read properties of undefined",
+					`    at C:\proj\path\file.ts:42:5`,
+				},
 			},
 		},
 		{
@@ -69,6 +78,14 @@ ValueError: boom
 				ErrorMessage: "boom",
 				FilePath:     `C:\proj\app\utils.py`,
 				LineNumber:   12,
+				StackTrace: []string{
+					"Traceback (most recent call last):",
+					`  File "C:\proj\app\main.py", line 5, in <module>`,
+					"    foo()",
+					`  File "C:\proj\app\utils.py", line 12, in foo`,
+					`    raise ValueError("boom")`,
+					"ValueError: boom",
+				},
 			},
 		},
 		{
@@ -111,6 +128,9 @@ ReferenceError: x is not defined
 			if got.LineNumber != tt.wantErr.LineNumber {
 				t.Errorf("LineNumber = %d, want %d", got.LineNumber, tt.wantErr.LineNumber)
 			}
+			if !reflect.DeepEqual(got.StackTrace, tt.wantErr.StackTrace) {
+				t.Errorf("StackTrace =\n%s\nwant\n%s", strings.Join(got.StackTrace, "\n"), strings.Join(tt.wantErr.StackTrace, "\n"))
+			}
 		})
 	}
 }
@@ -123,6 +143,9 @@ func TestIsSystemPath(t *testing.T) {
 		`/usr/lib/python3.12/os.py`,
 		`/venv/lib/python3.12/site-packages/requests/__init__.py`,
 		`/usr/lib/python3/dist-packages/pkg.py`,
+		`C:\Python312\Lib\python3.12\runpy.py`,
+		`node:async_hooks`,
+		`v8::internal::Isolate`,
 	}
 	for _, p := range system {
 		if !isSystemPath(p) {
