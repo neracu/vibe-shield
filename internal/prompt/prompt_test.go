@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vibe-shield/vibe-shield/internal/analyzer"
+	"github.com/neracu/vibe-shield/internal/analyzer"
 )
 
 func TestTailLogs(t *testing.T) {

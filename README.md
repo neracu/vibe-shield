@@ -46,6 +46,12 @@ Finds the broken file from the stack trace and extracts **±15 lines** of code a
 
 ## Installation
 
+### One-line install (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/neracu/vibe-shield/main/install.sh | bash
+```
+
 ### Go install
 
 ```bash
@@ -121,6 +127,25 @@ Your Command  →  Process Proxy  →  RegEx Detection  →  Snippet Extraction 
 4. **System Clipboard** — A structured markdown prompt (error, stack trace, snippet, last logs, fix instruction) is written to the clipboard — ready to paste.
 
 All processing is local. Nothing leaves your machine unless you paste the prompt yourself.
+
+---
+
+## Development
+
+```bash
+# Run tests
+go test ./...
+
+# Build locally
+go build -o vibe-shield ./cmd/vibe-shield
+
+# Cross-compile all platforms
+make build-all
+
+# Smoke test with example crash fixtures
+./vibe-shield python examples/fake_crash.py
+./vibe-shield node examples/crash.js
+```
 
 ---
 

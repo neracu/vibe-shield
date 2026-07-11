@@ -91,11 +91,12 @@ func parseNodeError(errorLine, errType, errMessage string, following []string) (
 		if reNodeError.MatchString(line) {
 			break
 		}
-		if _, _, ok := extractNodeFrame(line); !ok {
+		path, lineNum, ok := extractNodeFrame(line)
+		if !ok {
 			break
 		}
 		traceBlock = append(traceBlock, line)
-		if path, lineNum, ok := extractNodeFrame(line); ok && !isSystemPath(path) {
+		if !isSystemPath(path) {
 			userFile = path
 			userLine = lineNum
 		}

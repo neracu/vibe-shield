@@ -1,5 +1,5 @@
 # Binaries
-vibe-shield
+/vibe-shield
 vibe-shield.exe
 *.exe
 *.dll
@@ -28,7 +28,12 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+.cursor/
+.cursorignore
 
 # Temp
 .tmp/
 tmp/
+
+# Internal docs
+docx/

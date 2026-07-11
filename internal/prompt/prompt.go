@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/vibe-shield/vibe-shield/internal/analyzer"
+	"github.com/neracu/vibe-shield/internal/analyzer"
 )
 
 func GenerateMarkdownPrompt(err *analyzer.DetectedError, snippet string, lastLogs []string) string {

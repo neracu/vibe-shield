@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vibe-shield/vibe-shield/internal/runner"
+	"github.com/neracu/vibe-shield/internal/runner"
 )
 
 func TestRunSignalInterrupt(t *testing.T) {
