@@ -46,21 +46,101 @@ Finds the broken file from the stack trace and extracts **±15 lines** of code a
 
 ## Installation
 
-### One-line install (macOS / Linux)
+### Prerequisites
+
+**Go 1.25+ is required** to build and install Vibe-Shield from source.
+
+1. Download and install Go from [go.dev/dl](https://go.dev/dl/)
+2. Verify the installation:
+
+```bash
+go version
+```
+
+On Windows you can also use:
+
+```powershell
+winget install GoLang.Go
+```
+
+After installing Go, **restart your terminal** (or IDE) so `go` is available on your `PATH`.
+
+---
+
+### Clone the repository
+
+```bash
+git clone https://github.com/neracu/vibe-shield.git
+cd vibe-shield
+```
+
+---
+
+### Install from source
+
+#### macOS / Linux
+
+```bash
+go install ./cmd/vibe-shield
+```
+
+Make sure `$HOME/go/bin` is on your `PATH`:
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+Or use the one-line installer (downloads a prebuilt binary):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/neracu/vibe-shield/main/install.sh | bash
 ```
 
-### Go install
+#### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+This builds (or copies) the binary to `%USERPROFILE%\go\bin` and adds it to your User `PATH`.
+
+If `vibe-shield` is not found in an already-open terminal (common in Cursor/VS Code), refresh your session `PATH`:
+
+```powershell
+. .\scripts\refresh-path.ps1
+```
+
+Or run directly from the project folder:
+
+```powershell
+.\vibe-shield.exe python examples/fake_crash.py
+```
+
+#### Build manually (all platforms)
+
+```bash
+go build -o vibe-shield ./cmd/vibe-shield
+```
+
+On Windows the output is `vibe-shield.exe`. Move it to a directory on your `PATH`, or run it from the project folder.
+
+---
+
+### Alternative: install without cloning
+
+If you only need the CLI and already have Go installed:
 
 ```bash
 go install github.com/neracu/vibe-shield/cmd/vibe-shield@latest
 ```
 
-### Download a binary
+Ensure `$(go env GOPATH)/bin` is on your `PATH`.
 
-Grab a prebuilt release for your platform from [GitHub Releases](https://github.com/neracu/vibe-shield/releases):
+---
+
+### Download a prebuilt binary
+
+Grab a release for your platform from [GitHub Releases](https://github.com/neracu/vibe-shield/releases):
 
 | Platform | Binary |
 |----------|--------|
@@ -70,14 +150,6 @@ Grab a prebuilt release for your platform from [GitHub Releases](https://github.
 | Windows (amd64) | `vibe-shield-windows-amd64.exe` |
 
 Place the binary on your `PATH` and run `vibe-shield` from any terminal.
-
-### Build from source
-
-```bash
-git clone https://github.com/neracu/vibe-shield.git
-cd vibe-shield
-go build -o vibe-shield ./cmd/vibe-shield
-```
 
 ---
 
