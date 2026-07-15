@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/neracu/vibe-shield/internal/analyzer"
@@ -32,6 +33,7 @@ func main() {
 	cmd.Stdout = stdoutCap
 	cmd.Stderr = stderrCap
 
+	runStartedAt := time.Now()
 	interrupted, err := runner.Run(cmd)
 	if interrupted {
 		os.Exit(0)
@@ -48,9 +50,13 @@ func main() {
 		}
 
 		if detected, ok := analyzer.AnalyzeStderr(stderrCap.Lines()); ok {
-			snippet, snippetErr := analyzer.ExtractCodeContext(detected)
+			opts := analyzer.CodeContextOpts{RunStartedAt: runStartedAt}
+			if mt, statErr := analyzer.FileModTime(detected.FilePath); statErr == nil {
+				opts.BaselineModTime = mt
+			}
+			snippet, snippetStale, snippetErr := analyzer.ExtractCodeContext(detected, opts)
 			lastLogs := prompt.TailLogs(stdoutCap.Lines())
-			md := prompt.GenerateMarkdownPrompt(detected, snippet, lastLogs)
+			md := prompt.GenerateMarkdownPrompt(detected, snippet, lastLogs, snippetStale)
 
 			if clipErr := clipboard.WriteAll(md); clipErr != nil {
 				fmt.Fprintf(os.Stderr, "vibe-shield: clipboard unavailable: %v\n", clipErr)

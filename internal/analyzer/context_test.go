@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func writeLinesFile(t *testing.T, path string, count int) {
@@ -18,18 +19,25 @@ func writeLinesFile(t *testing.T, path string, count int) {
 	}
 }
 
+func freshOpts() CodeContextOpts {
+	return CodeContextOpts{RunStartedAt: time.Now().Add(time.Minute)}
+}
+
 func TestExtractCodeContext(t *testing.T) {
 	t.Run("middle line", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "sample.go")
 		writeLinesFile(t, path, 40)
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, stale, err := ExtractCodeContext(&DetectedError{
 			FilePath:   path,
 			LineNumber: 20,
-		})
+		}, freshOpts())
 		if err != nil {
 			t.Fatalf("ExtractCodeContext() error = %v", err)
+		}
+		if stale {
+			t.Fatal("expected non-stale snippet")
 		}
 
 		lines := strings.Split(got, "\n")
@@ -52,10 +60,10 @@ func TestExtractCodeContext(t *testing.T) {
 		path := filepath.Join(dir, "top.go")
 		writeLinesFile(t, path, 10)
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, _, err := ExtractCodeContext(&DetectedError{
 			FilePath:   path,
 			LineNumber: 1,
-		})
+		}, freshOpts())
 		if err != nil {
 			t.Fatalf("ExtractCodeContext() error = %v", err)
 		}
@@ -74,10 +82,10 @@ func TestExtractCodeContext(t *testing.T) {
 		path := filepath.Join(dir, "bottom.go")
 		writeLinesFile(t, path, 10)
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, _, err := ExtractCodeContext(&DetectedError{
 			FilePath:   path,
 			LineNumber: 10,
-		})
+		}, freshOpts())
 		if err != nil {
 			t.Fatalf("ExtractCodeContext() error = %v", err)
 		}
@@ -109,10 +117,10 @@ func TestExtractCodeContext(t *testing.T) {
 			}
 		}()
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, _, err := ExtractCodeContext(&DetectedError{
 			FilePath:   relName,
 			LineNumber: 2,
-		})
+		}, freshOpts())
 		if err != nil {
 			t.Fatalf("ExtractCodeContext() error = %v", err)
 		}
@@ -122,15 +130,18 @@ func TestExtractCodeContext(t *testing.T) {
 	})
 
 	t.Run("missing file", func(t *testing.T) {
-		got, err := ExtractCodeContext(&DetectedError{
+		got, stale, err := ExtractCodeContext(&DetectedError{
 			FilePath:   filepath.Join(t.TempDir(), "missing.go"),
 			LineNumber: 1,
-		})
+		}, freshOpts())
 		if err == nil {
 			t.Fatal("expected error for missing file")
 		}
 		if got != "" {
 			t.Errorf("got %q, want empty string", got)
+		}
+		if stale {
+			t.Error("expected non-stale for missing file")
 		}
 	})
 
@@ -139,10 +150,10 @@ func TestExtractCodeContext(t *testing.T) {
 		path := filepath.Join(dir, "short.go")
 		writeLinesFile(t, path, 3)
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, _, err := ExtractCodeContext(&DetectedError{
 			FilePath:   path,
 			LineNumber: 0,
-		})
+		}, freshOpts())
 		if err == nil {
 			t.Fatal("expected error for line 0")
 		}
@@ -156,15 +167,97 @@ func TestExtractCodeContext(t *testing.T) {
 		path := filepath.Join(dir, "short.go")
 		writeLinesFile(t, path, 3)
 
-		got, err := ExtractCodeContext(&DetectedError{
+		got, _, err := ExtractCodeContext(&DetectedError{
 			FilePath:   path,
 			LineNumber: 99,
-		})
+		}, freshOpts())
 		if err == nil {
 			t.Fatal("expected error for out-of-range line")
 		}
 		if got != "" {
 			t.Errorf("got %q, want empty string", got)
+		}
+	})
+
+	t.Run("stale when modified after run start", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "stale.go")
+		writeLinesFile(t, path, 5)
+
+		runStarted := time.Now().Add(-time.Hour)
+		newMtime := time.Now().Add(time.Minute)
+		if err := os.Chtimes(path, newMtime, newMtime); err != nil {
+			t.Fatalf("Chtimes() error = %v", err)
+		}
+
+		got, stale, err := ExtractCodeContext(&DetectedError{
+			FilePath:   path,
+			LineNumber: 3,
+		}, CodeContextOpts{RunStartedAt: runStarted})
+		if err != nil {
+			t.Fatalf("ExtractCodeContext() error = %v", err)
+		}
+		if !stale {
+			t.Fatal("expected stale snippet when file mtime is after run start")
+		}
+		if !strings.Contains(got, "3 >>") {
+			t.Errorf("got %q, want error line marker", got)
+		}
+	})
+
+	t.Run("stale when baseline mtime differs", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "baseline.go")
+		writeLinesFile(t, path, 5)
+
+		got, stale, err := ExtractCodeContext(&DetectedError{
+			FilePath:   path,
+			LineNumber: 2,
+		}, CodeContextOpts{
+			RunStartedAt:    time.Now().Add(-time.Hour),
+			BaselineModTime: time.Now().Add(-time.Minute),
+		})
+		if err != nil {
+			t.Fatalf("ExtractCodeContext() error = %v", err)
+		}
+		if !stale {
+			t.Fatal("expected stale snippet when baseline mtime differs")
+		}
+		if !strings.Contains(got, "2 >>") {
+			t.Errorf("got %q, want error line marker", got)
+		}
+	})
+
+	t.Run("not stale when baseline matches and run started after mtime", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "fresh.go")
+		writeLinesFile(t, path, 5)
+
+		pastMtime := time.Now().Add(-time.Hour)
+		if err := os.Chtimes(path, pastMtime, pastMtime); err != nil {
+			t.Fatalf("Chtimes() error = %v", err)
+		}
+
+		modTime, err := FileModTime(path)
+		if err != nil {
+			t.Fatalf("FileModTime() error = %v", err)
+		}
+
+		got, stale, err := ExtractCodeContext(&DetectedError{
+			FilePath:   path,
+			LineNumber: 2,
+		}, CodeContextOpts{
+			RunStartedAt:    time.Now(),
+			BaselineModTime: modTime,
+		})
+		if err != nil {
+			t.Fatalf("ExtractCodeContext() error = %v", err)
+		}
+		if stale {
+			t.Fatal("expected non-stale snippet when baseline matches and file predates run")
+		}
+		if !strings.Contains(got, "2 >>") {
+			t.Errorf("got %q, want error line marker", got)
 		}
 	})
 }

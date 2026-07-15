@@ -82,7 +82,7 @@ func TestGenerateMarkdownPrompt(t *testing.T) {
 	snippet := "10 | const x = 1;\n11 >> console.log(y);"
 	lastLogs := []string{"[INFO] starting", "[INFO] ready"}
 
-	md := GenerateMarkdownPrompt(err, snippet, lastLogs)
+	md := GenerateMarkdownPrompt(err, snippet, lastLogs, false)
 
 	checks := []string{
 		"# Vibe-Shield Crash Report",
@@ -117,7 +117,7 @@ func TestGenerateMarkdownPrompt_emptyOptionalSections(t *testing.T) {
 		FilePath:     "main.unknown",
 		LineNumber:   1,
 	}
-	md := GenerateMarkdownPrompt(err, "", nil)
+	md := GenerateMarkdownPrompt(err, "", nil, false)
 
 	if !strings.Contains(md, "(no stack trace available)") {
 		t.Error("expected empty stack trace placeholder")
@@ -130,6 +130,43 @@ func TestGenerateMarkdownPrompt_emptyOptionalSections(t *testing.T) {
 	}
 	if !strings.Contains(md, "```text") {
 		t.Error("expected text language tag for unknown extension")
+	}
+}
+
+func TestGenerateMarkdownPrompt_staleSnippetWarning(t *testing.T) {
+	err := &analyzer.DetectedError{
+		ErrorType:    "ReferenceError",
+		ErrorMessage: "x is not defined",
+		FilePath:     "index.js",
+		LineNumber:   10,
+	}
+	snippet := "10 >> console.log(y);"
+
+	md := GenerateMarkdownPrompt(err, snippet, nil, true)
+
+	if !strings.Contains(md, snippetStaleWarning) {
+		t.Errorf("prompt missing stale warning %q", snippetStaleWarning)
+	}
+	if !strings.Contains(md, snippet) {
+		t.Error("prompt missing snippet content")
+	}
+}
+
+func TestGenerateMarkdownPrompt_staleSnippetUnavailable(t *testing.T) {
+	err := &analyzer.DetectedError{
+		ErrorType:    "Error",
+		ErrorMessage: "boom",
+		FilePath:     "main.go",
+		LineNumber:   1,
+	}
+
+	md := GenerateMarkdownPrompt(err, "", nil, true)
+
+	if !strings.Contains(md, "(snippet unavailable)") {
+		t.Error("expected empty snippet placeholder")
+	}
+	if !strings.Contains(md, snippetStaleWarning) {
+		t.Errorf("prompt missing stale warning %q", snippetStaleWarning)
 	}
 }
 

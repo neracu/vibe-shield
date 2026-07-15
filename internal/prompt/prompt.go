@@ -10,7 +10,9 @@ import (
 	"github.com/neracu/vibe-shield/internal/analyzer"
 )
 
-func GenerateMarkdownPrompt(err *analyzer.DetectedError, snippet string, lastLogs []string) string {
+const snippetStaleWarning = "> **Warning:** The source file was modified after the command started or after the crash was detected. This code snippet may not reflect the state at the time of the crash.\n\n"
+
+func GenerateMarkdownPrompt(err *analyzer.DetectedError, snippet string, lastLogs []string, snippetStale bool) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "# Vibe-Shield Crash Report\n\n")
@@ -33,6 +35,9 @@ func GenerateMarkdownPrompt(err *analyzer.DetectedError, snippet string, lastLog
 		b.WriteString("(snippet unavailable)")
 	}
 	fmt.Fprintf(&b, "\n```\n\n")
+	if snippetStale {
+		b.WriteString(snippetStaleWarning)
+	}
 
 	fmt.Fprintf(&b, "### LAST LOGS\n\n")
 	fmt.Fprintf(&b, "```\n%s\n```\n\n", formatLastLogs(lastLogs))
