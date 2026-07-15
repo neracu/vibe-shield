@@ -41,6 +41,12 @@ func main() {
 	_ = stdoutCap.Flush()
 
 	if err != nil {
+		exitCode := 1
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		}
+
 		if detected, ok := analyzer.AnalyzeStderr(stderrCap.Lines()); ok {
 			snippet, snippetErr := analyzer.ExtractCodeContext(detected)
 			lastLogs := prompt.TailLogs(stdoutCap.Lines())
@@ -55,9 +61,19 @@ func main() {
 				ui.PrintSourceReadWarning()
 			}
 			ui.PrintClipboardSuccess()
+		} else {
+			stderrTail := prompt.TailStderr(stderrCap.Lines())
+			lastLogs := prompt.TailLogs(stdoutCap.Lines())
+			md := prompt.GenerateFallbackPrompt(exitCode, stderrTail, lastLogs)
+
+			if clipErr := clipboard.WriteAll(md); clipErr != nil {
+				fmt.Fprintf(os.Stderr, "vibe-shield: clipboard unavailable: %v\n", clipErr)
+			}
+
+			ui.PrintFallbackCrashDetected()
+			ui.PrintClipboardSuccess()
 		}
 
-		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.ExitCode())
 		}

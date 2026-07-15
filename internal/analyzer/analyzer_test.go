@@ -22,6 +22,50 @@ func TestAnalyzeStderr(t *testing.T) {
 		wantErr *DetectedError
 	}{
 		{
+			name: "node bare error node 22 sync throw",
+			input: `
+D:\IT\testrepo\backend\src\crash-test.ts:15
+    throw new Error("Intentional uncaught synchronous exception");
+          ^
+
+
+Error: Intentional uncaught synchronous exception
+    at sync (D:\IT\testrepo\backend\src\crash-test.ts:15:11)
+    at <anonymous> (D:\IT\testrepo\backend\src\crash-test.ts:40:17)
+    at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+`,
+			wantOK: true,
+			wantErr: &DetectedError{
+				ErrorType:    "Error",
+				ErrorMessage: "Intentional uncaught synchronous exception",
+				FilePath:     `D:\IT\testrepo\backend\src\crash-test.ts`,
+				LineNumber:   40,
+				StackTrace: []string{
+					"Error: Intentional uncaught synchronous exception",
+					`    at sync (D:\IT\testrepo\backend\src\crash-test.ts:15:11)`,
+					`    at <anonymous> (D:\IT\testrepo\backend\src\crash-test.ts:40:17)`,
+				},
+			},
+		},
+		{
+			name: "node caught rejection with prefixed error line",
+			input: `
+Caught in script wrapper: Error: Intentional unhandled promise rejection
+    at rejection (D:\IT\testrepo\backend\src\crash-test.ts:20:11)
+`,
+			wantOK: true,
+			wantErr: &DetectedError{
+				ErrorType:    "Error",
+				ErrorMessage: "Intentional unhandled promise rejection",
+				FilePath:     `D:\IT\testrepo\backend\src\crash-test.ts`,
+				LineNumber:   20,
+				StackTrace: []string{
+					"Caught in script wrapper: Error: Intentional unhandled promise rejection",
+					`    at rejection (D:\IT\testrepo\backend\src\crash-test.ts:20:11)`,
+				},
+			},
+		},
+		{
 			name: "node reference error skips node_modules",
 			input: `
 ReferenceError: x is not defined

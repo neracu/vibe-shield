@@ -23,8 +23,8 @@ func AnalyzeStderr(buffer []string) (*DetectedError, bool) {
 	}
 
 	for i, line := range buffer {
-		if m := reNodeError.FindStringSubmatch(line); m != nil {
-			if detected, ok := parseNodeError(line, m[1], m[2], buffer[i+1:]); ok {
+		if errType, errMessage, ok := matchNodeErrorLine(line); ok {
+			if detected, ok := parseNodeError(line, errType, errMessage, buffer[i+1:]); ok {
 				return detected, true
 			}
 		}
@@ -88,7 +88,7 @@ func parseNodeError(errorLine, errType, errMessage string, following []string) (
 	)
 
 	for _, line := range following {
-		if reNodeError.MatchString(line) {
+		if _, _, ok := matchNodeErrorLine(line); ok {
 			break
 		}
 		path, lineNum, ok := extractNodeFrame(line)
@@ -113,6 +113,14 @@ func parseNodeError(errorLine, errType, errMessage string, following []string) (
 		LineNumber:   userLine,
 		StackTrace:   SlimStackTrace(traceBlock),
 	}, true
+}
+
+func matchNodeErrorLine(line string) (errType, errMessage string, ok bool) {
+	m := reNodeError.FindStringSubmatch(line)
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
 }
 
 func extractNodeFrame(line string) (string, int, bool) {

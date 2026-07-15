@@ -96,3 +96,29 @@ func formatLastLogs(lines []string) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+func GenerateFallbackPrompt(exitCode int, stderrTail, stdoutTail []string) string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "# Vibe-Shield Crash Report\n\n")
+	fmt.Fprintf(&b, "| Field | Value |\n|-------|-------|\n")
+	fmt.Fprintf(&b, "| OS | %s |\n", runtime.GOOS)
+	fmt.Fprintf(&b, "| Command | `%s` |\n", commandLine())
+	fmt.Fprintf(&b, "| Exit code | %d |\n\n", exitCode)
+
+	fmt.Fprintf(&b, "### THE ERROR\n\n")
+	b.WriteString("No structured stack trace was parseable from stderr.\n\n")
+
+	fmt.Fprintf(&b, "### STDERR (last lines)\n\n")
+	fmt.Fprintf(&b, "```\n%s\n```\n\n", formatLastLogs(stderrTail))
+
+	fmt.Fprintf(&b, "### LAST LOGS\n\n")
+	fmt.Fprintf(&b, "```\n%s\n```\n\n", formatLastLogs(stdoutTail))
+
+	fmt.Fprintf(&b, "### INSTRUCTION FOR AI\n\n")
+	b.WriteString("Diagnose this failure from the stderr output and last logs above.\n")
+	b.WriteString("No source file or line could be located automatically.\n")
+	b.WriteString("Return only the minimal fix needed; do not refactor unrelated code.\n")
+
+	return b.String()
+}

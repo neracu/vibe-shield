@@ -22,6 +22,13 @@ func PrintClipboardSuccess() {
 		"📋 [Vibe-Shield] Surgical prompt successfully copied to clipboard. Paste it into your AI!")
 }
 
+func PrintFallbackCrashDetected() {
+	color.New(color.FgRed, color.Bold).Fprintln(os.Stderr,
+		"🚨 [Vibe-Shield] Crash detected (unparsed output)!")
+	color.New(color.FgHiBlack, color.Faint).Fprintln(os.Stderr,
+		"   Could not locate exact source line; raw stderr included in prompt.")
+}
+
 func PrintSourceReadWarning() {
 	color.New(color.FgYellow).Fprintln(os.Stderr,
 		"⚠️ [Vibe-Shield] Could not read source file, context might be limited.")

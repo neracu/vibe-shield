@@ -32,6 +32,42 @@ func TestTailLogs(t *testing.T) {
 	}
 }
 
+func TestTailStderr(t *testing.T) {
+	input := makeLines(25)
+	got := TailStderr(input)
+	if len(got) != maxTailStderr {
+		t.Fatalf("TailStderr() len = %d, want %d", len(got), maxTailStderr)
+	}
+	if got[0] != input[len(input)-maxTailStderr] {
+		t.Errorf("TailStderr() first = %q, want %q", got[0], input[len(input)-maxTailStderr])
+	}
+}
+
+func TestGenerateFallbackPrompt(t *testing.T) {
+	stderrTail := []string{"Intentional process exit with code 1"}
+	stdoutTail := []string{"> crash:exit", "> tsx src/crash-test.ts exit"}
+
+	md := GenerateFallbackPrompt(1, stderrTail, stdoutTail)
+
+	checks := []string{
+		"# Vibe-Shield Crash Report",
+		"| Exit code | 1 |",
+		"No structured stack trace was parseable",
+		"### STDERR (last lines)",
+		"Intentional process exit with code 1",
+		"### LAST LOGS",
+		"> crash:exit",
+		"Diagnose this failure",
+		"No source file or line could be located",
+	}
+
+	for _, want := range checks {
+		if !strings.Contains(md, want) {
+			t.Errorf("fallback prompt missing %q", want)
+		}
+	}
+}
+
 func TestGenerateMarkdownPrompt(t *testing.T) {
 	err := &analyzer.DetectedError{
 		ErrorType:    "ReferenceError",
