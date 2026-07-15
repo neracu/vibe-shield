@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -34,9 +35,9 @@ func main() {
 	cmd.Stderr = stderrCap
 
 	runStartedAt := time.Now()
-	interrupted, err := runner.Run(cmd)
-	if interrupted {
-		os.Exit(0)
+	sig, err := runner.Run(cmd)
+	if sig != nil {
+		os.Exit(exitCodeForSignal(sig))
 	}
 
 	_ = stderrCap.Flush()
@@ -87,4 +88,18 @@ func main() {
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func exitCodeForSignal(sig os.Signal) int {
+	switch sig {
+	case os.Interrupt, syscall.SIGINT:
+		return 130
+	case syscall.SIGTERM:
+		return 143
+	default:
+		if s, ok := sig.(syscall.Signal); ok {
+			return 128 + int(s)
+		}
+		return 1
+	}
 }

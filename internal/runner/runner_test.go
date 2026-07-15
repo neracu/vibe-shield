@@ -26,12 +26,15 @@ func TestRunSignalInterrupt(t *testing.T) {
 		_ = p.Signal(os.Interrupt)
 	}()
 
-	interrupted, err := runner.Run(cmd)
+	sig, err := runner.Run(cmd)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !interrupted {
-		t.Fatal("expected interrupted=true")
+	if sig == nil {
+		t.Fatal("expected non-nil signal on interrupt")
+	}
+	if sig != os.Interrupt {
+		t.Fatalf("expected os.Interrupt, got %v", sig)
 	}
 }
 
@@ -43,9 +46,9 @@ func TestRunNormalExit(t *testing.T) {
 		cmd = exec.Command("true")
 	}
 
-	interrupted, err := runner.Run(cmd)
-	if interrupted {
-		t.Fatal("expected interrupted=false")
+	sig, err := runner.Run(cmd)
+	if sig != nil {
+		t.Fatal("expected nil signal on normal exit")
 	}
 	if err != nil {
 		t.Fatalf("Run: %v", err)

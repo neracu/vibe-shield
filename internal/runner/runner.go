@@ -8,10 +8,10 @@ import (
 )
 
 // Run starts cmd, waits for it to finish or for SIGINT/SIGTERM.
-// On signal, the child is killed and interrupted is true with nil error.
-func Run(cmd *exec.Cmd) (interrupted bool, err error) {
+// On signal, the child is killed and the caught signal is returned with nil error.
+func Run(cmd *exec.Cmd) (sig os.Signal, err error) {
 	if err = cmd.Start(); err != nil {
-		return false, err
+		return nil, err
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -24,11 +24,11 @@ func Run(cmd *exec.Cmd) (interrupted bool, err error) {
 	}()
 
 	select {
-	case <-sigCh:
+	case sig = <-sigCh:
 		_ = cmd.Process.Kill()
 		<-done
-		return true, nil
+		return sig, nil
 	case err = <-done:
-		return false, err
+		return nil, err
 	}
 }
