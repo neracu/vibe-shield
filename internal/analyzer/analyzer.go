@@ -14,22 +14,11 @@ type DetectedError struct {
 }
 
 func AnalyzeStderr(buffer []string) (*DetectedError, bool) {
-	for i, line := range buffer {
-		if rePyTraceback.MatchString(line) {
-			if detected, ok := parsePythonTraceback(buffer[i:]); ok {
-				return detected, true
-			}
+	for _, d := range stderrDetectors {
+		if detected, ok := d.Detect(buffer); ok {
+			return detected, true
 		}
 	}
-
-	for i, line := range buffer {
-		if errType, errMessage, ok := matchNodeErrorLineWithContext(line, buffer[i+1:]); ok {
-			if detected, ok := parseNodeError(line, errType, errMessage, buffer[i+1:]); ok {
-				return detected, true
-			}
-		}
-	}
-
 	return nil, false
 }
 
