@@ -15,12 +15,11 @@ const snippetStaleWarning = "> **Warning:** The source file was modified after t
 func GenerateMarkdownPrompt(err *analyzer.DetectedError, snippet string, lastLogs []string, snippetStale bool) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# Vibe-Shield Crash Report\n\n")
-	fmt.Fprintf(&b, "| Field | Value |\n|-------|-------|\n")
-	fmt.Fprintf(&b, "| OS | %s |\n", runtime.GOOS)
-	fmt.Fprintf(&b, "| Runtime | %s |\n", runtimeLabel(err.FilePath))
-	fmt.Fprintf(&b, "| Command | `%s` |\n", commandLine())
-	fmt.Fprintf(&b, "| File | `%s:%d` |\n\n", err.FilePath, err.LineNumber)
+	writeReportHeader(&b, [][2]string{
+		{"Runtime", runtimeLabel(err.FilePath)},
+		{"Command", fmt.Sprintf("`%s`", commandLine())},
+		{"File", fmt.Sprintf("`%s:%d`", err.FilePath, err.LineNumber)},
+	})
 
 	fmt.Fprintf(&b, "### THE ERROR\n\n")
 	fmt.Fprintf(&b, "**Type:** %s\n", err.ErrorType)
@@ -105,11 +104,10 @@ func formatLastLogs(lines []string) string {
 func GenerateFallbackPrompt(exitCode int, stderrTail, stdoutTail []string) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# Vibe-Shield Crash Report\n\n")
-	fmt.Fprintf(&b, "| Field | Value |\n|-------|-------|\n")
-	fmt.Fprintf(&b, "| OS | %s |\n", runtime.GOOS)
-	fmt.Fprintf(&b, "| Command | `%s` |\n", commandLine())
-	fmt.Fprintf(&b, "| Exit code | %d |\n\n", exitCode)
+	writeReportHeader(&b, [][2]string{
+		{"Command", fmt.Sprintf("`%s`", commandLine())},
+		{"Exit code", fmt.Sprintf("%d", exitCode)},
+	})
 
 	fmt.Fprintf(&b, "### THE ERROR\n\n")
 	b.WriteString("No structured stack trace was parseable from stderr.\n\n")
@@ -126,4 +124,14 @@ func GenerateFallbackPrompt(exitCode int, stderrTail, stdoutTail []string) strin
 	b.WriteString("Return only the minimal fix needed; do not refactor unrelated code.\n")
 
 	return b.String()
+}
+
+func writeReportHeader(b *strings.Builder, extraRows [][2]string) {
+	fmt.Fprintf(b, "# Vibe-Shield Crash Report\n\n")
+	fmt.Fprintf(b, "| Field | Value |\n|-------|-------|\n")
+	fmt.Fprintf(b, "| OS | %s |\n", runtime.GOOS)
+	for _, row := range extraRows {
+		fmt.Fprintf(b, "| %s | %s |\n", row[0], row[1])
+	}
+	b.WriteByte('\n')
 }
