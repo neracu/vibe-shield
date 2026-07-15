@@ -7,6 +7,12 @@ import (
 	"github.com/fatih/color"
 )
 
+func ConfigureColor(noColorFlag bool) {
+	if noColorFlag || os.Getenv("NO_COLOR") != "" || os.Getenv("TERM") == "dumb" {
+		color.NoColor = true
+	}
+}
+
 func PrintShielding(command string) {
 	color.New(color.FgHiBlack, color.Faint).Fprintf(os.Stderr,
 		"🛡️ [Vibe-Shield] Shielding your code session (running: %s)...\n", command)

@@ -18,9 +18,11 @@ import (
 )
 
 func main() {
-	args := os.Args[1:]
+	args, noColorFlag := stripNoColorFlag(os.Args[1:])
+	ui.ConfigureColor(noColorFlag)
+
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: vibe-shield <command> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: vibe-shield [--no-color] <command> [args...]")
 		os.Exit(1)
 	}
 
@@ -88,6 +90,14 @@ func main() {
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func stripNoColorFlag(args []string) (remaining []string, noColor bool) {
+	for len(args) > 0 && args[0] == "--no-color" {
+		noColor = true
+		args = args[1:]
+	}
+	return args, noColor
 }
 
 func exitCodeForSignal(sig os.Signal) int {
