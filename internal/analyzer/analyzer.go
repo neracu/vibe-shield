@@ -23,7 +23,7 @@ func AnalyzeStderr(buffer []string) (*DetectedError, bool) {
 	}
 
 	for i, line := range buffer {
-		if errType, errMessage, ok := matchNodeErrorLine(line); ok {
+		if errType, errMessage, ok := matchNodeErrorLineWithContext(line, buffer[i+1:]); ok {
 			if detected, ok := parseNodeError(line, errType, errMessage, buffer[i+1:]); ok {
 				return detected, true
 			}
@@ -116,11 +116,40 @@ func parseNodeError(errorLine, errType, errMessage string, following []string) (
 }
 
 func matchNodeErrorLine(line string) (errType, errMessage string, ok bool) {
-	m := reNodeError.FindStringSubmatch(line)
+	m := reNodeErrorAtStart.FindStringSubmatch(line)
 	if m == nil {
 		return "", "", false
 	}
 	return m[1], m[2], true
+}
+
+func matchNodeErrorLineWithContext(line string, following []string) (errType, errMessage string, ok bool) {
+	if errType, errMessage, ok := matchNodeErrorLine(line); ok {
+		return errType, errMessage, true
+	}
+	m := reNodeErrorEmbedded.FindStringSubmatch(line)
+	if m == nil {
+		return "", "", false
+	}
+	next, ok := nextNonEmptyLine(following)
+	if !ok || !isStackFrame(next) {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+func nextNonEmptyLine(lines []string) (string, bool) {
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			return line, true
+		}
+	}
+	return "", false
+}
+
+func isStackFrame(line string) bool {
+	_, _, ok := extractNodeFrame(line)
+	return ok
 }
 
 func extractNodeFrame(line string) (string, int, bool) {

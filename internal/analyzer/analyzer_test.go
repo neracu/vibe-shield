@@ -149,6 +149,14 @@ ReferenceError: x is not defined
 `,
 			wantOK: false,
 		},
+		{
+			name: "console log with error-like text is not a crash",
+			input: `
+console.log("ValidationError: user input invalid")
+[INFO] done
+`,
+			wantOK: false,
+		},
 	}
 
 	for _, tt := range tests {
