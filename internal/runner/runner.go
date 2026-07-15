@@ -25,8 +25,10 @@ func Run(cmd *exec.Cmd) (sig os.Signal, err error) {
 
 	select {
 	case sig = <-sigCh:
-		_ = cmd.Process.Kill()
-		<-done
+		// Child shutdown is platform-specific (see runner_unix.go / runner_windows.go).
+		// Windows has no POSIX SIGTERM: Process.Kill() maps to TerminateProcess and is always abrupt.
+		// On Unix we can deliver SIGTERM first so the child may exit cleanly before SIGKILL.
+		terminateChild(cmd, done)
 		return sig, nil
 	case err = <-done:
 		return nil, err
